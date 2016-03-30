@@ -20,8 +20,17 @@ departure<-function(effectPt,ptMap,eventQueue,slide,count){
   return(newEffectPt=newEffectPt,newPtMap=newPtMap,
          newEventQueue=newEventQueue)
 }
-arrival<-function(pt,time,param){  
-  neig<-rangeQuery(pt,param)
+arrival<-function(newPt,effectPt,eventQue,ptMap,curTime,outlierParam){ 
+  outlier<-list()
+  neig<-rangeQuery(newPt,effectPt,outlierParam)
+  arrUpdata<-lapply(neig,arrUpdata,curTime,eventQue,ptMap)
+  if(length(neig)<outlierParam$k){
+    outlier<-c(outlier,newPt[length(newPt)])
+  }
+  
+  
+}
+arrUpdata<-function(){
   
   
 }

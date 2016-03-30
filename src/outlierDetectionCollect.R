@@ -16,15 +16,17 @@ cod<-function(streamInfo,param){
   
   outlier<-list()    #record outliers;
   ptMap<-hash()      #index data points in the current window;
+  eventQue=list()    #event list
   browser();
   tempStream<-DSD_ReadCSV(file);
   count<-0;
   effectPt<-c();
   while(count<(N+1){
     count<-count+1;
-    newPt<-get_points(tempStream,slide,outofpoint="stop")
-    newPt<-c(newPt,count)
-    newPtInfo<-list(preNeig=c(),nsucc=0,time=count) 
+    curTime=count;
+    newPt<-get_points(tempStream,1,outofpoint="stop")
+    newPt<-c(newPt,curTime)
+    newPtInfo<-list(preNeig=c(),nsucc=0,time=curTime) 
     nr<-nrow(effectPt)
     param1<-list(k=k,R=R)
     if (nr<k)&& length(effectPt)!=0){
@@ -32,24 +34,21 @@ cod<-function(streamInfo,param){
       
       neig<-rangeQuery(newPt,effectPt,param1)
       effectPt<-effectPt[-nr:-k,]
-      newPtInfo$preNeig<-neig[neig!=count]
+      newPtInfo$preNeig<-neig[neig!=curTime]
       
     } else {      
-      if ((count-window$start)>width){
+      if ((curTime-window$start)>width){
         window$start<-window$start+slide
         expired<-c(effectPt[,ncol(effectPt)]<window$start)
         expired<-effectPt[expired,ncol(effectPt)]
         effectPt<-effectPt[-expired,]
-        lapply(expired,departure,ptMap)       
+        lapply(expired,departure,ptMap)    
         
       }
-      neig<-rangeQuery(newPt,effectPt,param1)
-      arrUpdata<-lapply(neig,arrival,count)
+      updata<-arrival(pt,effectPt,eventQue,ptMap,curTime,outlierParam)
     }
     effectPt<-rbind(effectPt,newPt)
-    ptMap[as.character(count)]<-newPtInfo
-    
-  }
-  
+    ptMap[as.character(count)]<-newPtInfo    
+  } 
   
 }
