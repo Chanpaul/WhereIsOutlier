@@ -2,6 +2,7 @@ library(stream)   #stream package
 library(pracma)
 library(hash)
 library(FNN)
+library(rscala)
 
 projDir<-"D://Wangjin//UmassMed//Code//RCode//WhereIsOutlier";
 #projDir<-regexprep(projDir,"\","//"");

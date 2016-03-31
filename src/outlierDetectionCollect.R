@@ -26,7 +26,8 @@ cod<-function(streamInfo,param){
     curTime=count;
     newPt<-get_points(tempStream,1,outofpoint="stop")
     newPt<-c(newPt,curTime)
-    newPtInfo<-list(preNeig=c(),nsucc=0,time=curTime) 
+    newPtInfo<-list(preNeig=c(),nsucc=0,time=curTime,
+                    expired=curTime+window$width,id=curTime) 
     nr<-nrow(effectPt)
     param1<-list(k=k,R=R)
     if (nr<k)&& length(effectPt)!=0){
@@ -45,7 +46,23 @@ cod<-function(streamInfo,param){
         lapply(expired,departure,ptMap)    
         
       }
-      updata<-arrival(pt,effectPt,eventQue,ptMap,curTime,outlierParam)
+      #*****************updata upon arrival*******************************
+      neig<-rangeQuery(newPt,effectPt,outlierParam)
+      arrUpdate<-lapply(neig,arrUpdata,curTime,ptMap)
+      tempOutlier<-lapply(arrUpdata,function(x) if(x$mvToInlier=='Y') x$id)
+      outlier<-c(outlier,tempOutlier)
+      lapply(arrUpdate,function(x) )
+      newPtInfo<-arrUpdate$ptInfo
+      
+      insertEventQue=ev
+      
+      if(length(neig)<outlierParam$k){
+        outlier<-c(outlier,newPt[length(newPt)])
+      }else {        
+        eventQue<-c(eventQue,list(c(min(neig),id)))
+      }     
+      
+      
     }
     effectPt<-rbind(effectPt,newPt)
     ptMap[as.character(count)]<-newPtInfo    
