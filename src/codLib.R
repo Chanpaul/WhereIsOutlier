@@ -1,53 +1,105 @@
+getEvtQue<-function(evq){
+  temp<-lapply(evq,function(x) x["time"])
+  minId<-which.min(temp)  
+  return(minId)
+}
 #lazy update queue
-lue<-function(evq){
-  
-  
+lue<-function(expiredPt,evq,ptMap,outlier,curTime){
+  #browser()
+  newOutlier<-outlier
+  newEvq<-evq 
+  #browser()
+  if (length(newEvq)>0){
+    evtid<-getEvtQue(newEvq)    
+    #browser()
+    while (newEvq[[evtid]]["time"]<=curTime){
+      ptInfo<-t(values(ptMap,as.character(newEvq[[evtid]]["id"])))
+      ptInfo<-ptInfo[1,]
+      names(ptInfo)<-c('preNeig','nsucc','time','expired','id')
+      newEvq[[evtid]]=NULL
+      ptInfo$preNeig[ptInfo$preNeig==expiredPt]=NULL
+      nsz<-length(ptInfo$preNeig)+ptInfo$nsucc
+      if(nsz<outlier$k){
+        newOutlier$idList<-c(newOutlier$idList,ptInfo$id)
+      } else {
+        res2<-sapply(ptInfo$preNeig,function(x,y) t(values(y,as.character(x)))[1,]$time,ptMap)
+        newEvq<-c(newEvq,list(c(time=min(res2),id=ptInfo$id))  )
+        
+      }
+      if (length(newEvq)==0){
+        break
+      } else {
+        evtid<-getEvtQue(newEvq) 
+      }
+             
+    }
+  }
+   
+  return(list(evq=newEvq,outlier=newOutlier))
 }
 #Direct Updata Queue
 due<-function(evq){
   
   
 }
-departure<-function(effectPt,ptMap,eventQueue,slide,count){
-  newPtMap<-ptMap
-  newEventQueue=eventQueue
-  
-  expiredPt<-effectPt[1:slide,ncol(effectPt)]
-  newEffectPt<-effectPt[-(1:slide),]
-  newPtMap[as.character(expiredPt)]=NULL
-  
-  
-  return(newEffectPt=newEffectPt,newPtMap=newPtMap,
-         newEventQueue=newEventQueue)
+
+findExpired<-function(ptInfo,curWindow){
+  id<-0
+  if (ptInfo$time<curWindow$start){
+    id<-ptInfo$id
+  } else {
+    id<-0
+  }
+  return(id)  
 }
-arrUpdata<-function(ptId,outlier,ptMap,outlierParam){
+departure<-function(effectPt,ptMap,eventQueue,curWindow,outlier,curTime){
+  newPtMap<-ptMap
+  #browser()
+  newEffectPt<-effectPt
+  newEventQueue=eventQueue
+  newOutlier<-outlier
+  ptInfoMx<-t(values(ptMap))
+  expired<-apply(ptInfoMx,1,findExpired,curWindow)
+  #browser()  
+  expId<-expired[expired!=0]
+  if (length(expId)>0){
+    newPtMap[as.character(expId)]<-NULL
+    
+    newEffectPt<-newEffectPt[newEffectPt[,ncol(newEffectPt)]!=expId,]  
+    updateLue<-lue(expId,newEventQueue,ptMap,outlier,curTime)
+    newEventQueue<-updateLue$evq
+    newOutlier<-updateLue$outlier
+  }  
+  return(list(newEffectPt=newEffectPt,newPtMap=newPtMap,
+         newEventQueue=newEventQueue,newOutlier=newOutlier))
+}
+arrival<-function(ptId,outlier,ptMap,evq){
+  #browser()
   mvToInlier<-'N'
-  ev<-list()
-  ptInfo<-values(ptMap,as.character(ptId))  
+  evt<-list()  
+  
+  ptInfo<-t(values(ptMap,as.character(ptId)))  
   names(ptInfo)<-c('preNeig','nsucc','time','expired','id')
   ptInfo$nsucc<-ptInfo$nsucc+1
-  nn<-ptInfo$nsucc+length(ptInfo$preNeig)
-  
-  if ((sum(outlier==ptInfo$id)!=0)&&(nn==outlierParam$k)){
+  nn<-ptInfo$nsucc+length(ptInfo$preNeig)  
+  if (sum(outlier$idList==ptInfo$id)!=0 &&(nn==outlier$k)){
     mvToInlier<-'Y'
-  }
-  if (length(ptInfo$preNeig)!=0){
-    res<-values(ptMap,as.character(ptInfo$preNeig))  
-    res1<-lapply(res,function(x)names(x)<-c('preNeig','time',
-                                      'expired','id') x)
-    res2<-lapply(res1,function(x) x$time )
-    minid<-which.min(unlist(res2))    
-    ev<-list(time=res1[[minid]]$time,id=ptInfo$id)    
-  }
+    if (length(ptInfo$preNeig)!=0){
+      res<-t(values(ptMap,as.character(ptInfo$preNeig)))  
+      #browser()
+      res1<-apply(res,1,function(x) x[4])   
+      
+      evt<-list(c(time=min(unlist(res1)),id=ptInfo$id))    
+    }
+  } 
   
-  return(ptInfo=ptInfo,mvToInlier=mvToInlier,
-         insertEventQue=ev)
+  return(list(ptInfo=ptInfo,mvToInlier=mvToInlier,
+         evt=evt))
 }
-rangeQuery<-function(pt,effectPt,param){
+rangeQuery<-function(effectPt,pt,param){
   k<-param$k
   R<-param$R
-  tknn<-get.knnx(effectPt,pt,k,algo="kd_tree")  
-  newPtInfo$preNeig<-tknn$nn.index[tknn$nn.dist<=R]
-  tid<-effectPt[newPtInfo$preNeig,labelBit+1]
-  return(tid)
+  #browser()
+  tknn<-get.knnx(effectPt,pt,k,algo="kd_tree")    
+  return(tknn)
 }
